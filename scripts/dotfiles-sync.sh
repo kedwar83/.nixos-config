@@ -1,129 +1,181 @@
-#!/bin/bash
-
+#!/usr/bin/env bash
 set -e
 
-# Configuration
 ACTUAL_USER=${SUDO_USER:-$USER}
-ACTUAL_HOME="/home/$ACTUAL_USER"
-REPO_PATH="$ACTUAL_HOME/.dotfiles"
-DOTFILES_PATH="$REPO_PATH"
+NIXOS_CONFIG_DIR="/etc/nixos"
+NIXOS_DOT_DIR="/home/$ACTUAL_USER/.nixos-config"
 CURRENT_USER=$(id -un $ACTUAL_USER)
-TEMP_FILE=$(mktemp)
-FAILURE_LOG="$DOTFILES_PATH/failure_log.txt"
-SETUP_FLAG="$ACTUAL_HOME/.system_setup_complete"
+SETUP_FLAG="/home/$ACTUAL_USER/.system_setup_complete"
+GIT_REPO_URL="git@github.com:kedwar83/.nixos-config.git"
 
 echo "Running as user: $CURRENT_USER"
-echo "Home directory: $ACTUAL_HOME"
-echo "Repo and Dotfiles path: $REPO_PATH"
-echo "Temporary file: $TEMP_FILE"
-echo "Failure log file: $FAILURE_LOG"
+echo "NixOS config directory: $NIXOS_CONFIG_DIR"
+echo "NixOS dot directory: $NIXOS_DOT_DIR"
+echo "Git repository URL: $GIT_REPO_URL"
 
-# Exclusion list for rsync
-EXCLUSIONS=(
-    --exclude=".Xauthority"
-    --exclude=".xsession-errors"
-    --exclude=".bash_history"
-    --exclude=".cache"
-    --exclude=".compose-cache"
-    --exclude=".local/share/Trash/"
-    --exclude=".steam"
-    --exclude=".vscode"
-    --exclude="node_modules"
-    --exclude=".nix-profile"
-    --exclude=".nix-defexpr"
-    --exclude=".dotfiles"
-    --exclude=".mozilla/firefox/*/storage"
-    --exclude=".mozilla/firefox/*/cache2"
-    --exclude=".mozilla/firefox/*/crashes"
-    --exclude=".mozilla/firefox/*/minidumps"
-    --exclude=".mozilla/firefox/*/cookies.sqlite"
-    --exclude=".mozilla/firefox/*/cookies.sqlite.bak"
-    --exclude=".mozilla/firefox/*/cookies.sqlite-wal"
-    --exclude=".mozilla/firefox/*/cookies.sqlite.bak-rebuild"
-    --exclude=".mozilla/firefox/*/key4.db"
-    --exclude=".mozilla/firefox/*/logins-backup.json"
-    --exclude=".mozilla/firefox/*/lock"
-    --exclude=".mozilla/firefox/*/sessionstore-backups"
-    --exclude=".mozilla/firefox/*/logins.json"
-    --exclude=".ssh"
-    --exclude=".config/Joplin/SingletonCookie"
-    --exclude=".config/Joplin/SingletonLock"
-    --exclude=".config/Joplin/SingletonSocket"
-    --exclude=".config/Joplin/GPUCache/"
-    --exclude=".config/Signal\ Beta/stickers.noindex"
-    --exclude=".config/Signal\ Beta/SingletonCookie"
-    --exclude=".config/Signal\ Beta/SingletonLock"
-    --exclude=".config/Signal\ Beta/SingletonSocket"
-    --exclude=".local/state/nix/profiles/home-manager"
-)
-
-# Initialize/check git repository
-init_git_repo() {
-    echo "Checking git repository setup..." | tee -a "$TEMP_FILE"
-
-    # Create directory if it doesn't exist
-    if [ ! -d "$DOTFILES_PATH" ]; then
-        sudo -u "$ACTUAL_USER" mkdir -p "$DOTFILES_PATH"
+# Function to setup git config
+setup_git_config() {
+    # Check if the .git directory exists
+    if [ ! -d "$NIXOS_DOT_DIR/.git" ]; then
+        echo "Initializing a new git repository in $NIXOS_DOT_DIR..."
+        sudo -u $ACTUAL_USER git init "$NIXOS_DOT_DIR"
     fi
 
-    # Initialize git if needed
-    if [ ! -d "$DOTFILES_PATH/.git" ]; then
-        echo "Initializing new git repository..." | tee -a "$TEMP_FILE"
-        cd "$DOTFILES_PATH"
-        sudo -u "$ACTUAL_USER" git init
-        sudo -u "$ACTUAL_USER" git config --local init.defaultBranch main
+    # Check if git email is set
+    if [ -z "$(sudo -u $ACTUAL_USER git config --global user.email)" ]; then
+        echo "Setting git email..."
+        sudo -u $ACTUAL_USER git config --global user.email "keganedwards@proton.me"
     fi
 
-    # Make sure it's a safe directory
-    sudo -u "$ACTUAL_USER" git config --global --add safe.directory "$DOTFILES_PATH"
+    # Check if safe.directory is set
+    if ! sudo -u $ACTUAL_USER git config --global --get safe.directory | grep -q "^$NIXOS_DOT_DIR\$"; then
+        echo "Adding $NIXOS_DOT_DIR as a safe directory..."
+        sudo -u $ACTUAL_USER git config --global --add safe.directory "$NIXOS_DOT_DIR"
+    fi
 
-    # Check for remote
-    if ! sudo -u "$ACTUAL_USER" git -C "$DOTFILES_PATH" remote get-url origin >/dev/null 2>&1; then
-        echo "Setting up remote repository..." | tee -a "$TEMP_FILE"
-        sudo -u "$ACTUAL_USER" git -C "$DOTFILES_PATH" remote add origin "git@github.com:$CURRENT_USER/.dotfiles.git"
+    # Check if a remote repository is set
+    if ! sudo -u $ACTUAL_USER git -C "$NIXOS_DOT_DIR" remote get-url origin &> /dev/null; then
+        echo "No remote repository found. Adding origin remote..."
+        sudo -u $ACTUAL_USER git -C "$NIXOS_DOT_DIR" remote add origin "$GIT_REPO_URL"
+    else
+        echo "Remote repository already configured."
     fi
 }
 
-# Copy dotfiles and their contents
-copy_dotfiles() {
-    echo "Copying dotfiles to repository..." | tee -a "$TEMP_FILE"
+generate_luks_config() {
+    local config_file="$NIXOS_DOT_DIR/configuration.nix"
+    local temp_file=$(mktemp)
 
-    # Use rsync to copy all dotfiles and their contents, excluding specified patterns
-    sudo -u "$ACTUAL_USER" rsync -av --no-links "${EXCLUSIONS[@]}" \
-        --include=".*" \
-        --include=".*/**" \
-        --exclude="*" \
-        "$ACTUAL_HOME/" "$DOTFILES_PATH/"
+    # Find the boot device (assuming it's an NVMe drive)
+    local boot_device=$(findmnt -n -o SOURCE /boot | grep -o '/dev/nvme[0-9]n[0-9]')
+
+    # Get LUKS device UUIDs
+    local luks_uuids=($(blkid | grep "TYPE=\"crypto_LUKS\"" | grep -o "UUID=\"[^\"]*\"" | cut -d'"' -f2))
+
+    # Generate the boot configuration section
+    cat > "$temp_file" << EOL
+  boot = {
+    loader = {
+      grub.enable = true;
+      grub.device = "${boot_device}";
+      grub.useOSProber = true;
+      grub.enableCryptodisk = true;
+    };
+    initrd = {
+      luks.devices = {
+EOL
+
+    # Add each LUKS device to the configuration
+    for uuid in "${luks_uuids[@]}"; do
+        cat >> "$temp_file" << EOL
+        "luks-${uuid}" = {
+          device = "/dev/disk/by-uuid/${uuid}";
+          keyFile = "/boot/crypto_keyfile.bin";
+        };
+EOL
+    done
+
+    # Close the configuration section
+    cat >> "$temp_file" << EOL
+      };
+      secrets = {
+        "/boot/crypto_keyfile.bin" = null;
+      };
+    };
+  };
+EOL
+
+    # Replace the boot configuration section in the original file
+    if [ -f "$config_file" ]; then
+        # Create a backup
+        cp "$config_file" "${config_file}.backup"
+
+        # Replace the boot configuration section
+        awk -v replacement="$(cat $temp_file)" '
+        /^[[:space:]]*boot[[:space:]]*=[[:space:]]*{/ {
+            print replacement
+            in_boot_section=1
+            next
+        }
+        in_boot_section {
+            if (match($0, /^[[:space:]]*};[[:space:]]*$/)) {
+                in_boot_section=0
+                next
+            }
+            if (in_boot_section) next
+        }
+        {print}
+        ' "${config_file}.backup" > "$config_file"
+
+        # Clean up
+        rm "$temp_file"
+        echo "LUKS configuration updated successfully."
+    else
+        echo "Error: configuration.nix not found in $NIXOS_DOT_DIR"
+        rm "$temp_file"
+        return 1
+    fi
 }
 
-# Main script execution
+# In the first-time setup section, before the rsync command:
 if [ ! -f "$SETUP_FLAG" ]; then
-    echo "First-time setup detected..." | tee -a "$TEMP_FILE"
-    sudo -u "$ACTUAL_USER" mkdir -p "$DOTFILES_PATH"
-    init_git_repo
+    echo "First-time setup detected..."
+    # Generate LUKS configuration
+    echo "Generating LUKS configuration..."
+    generate_luks_config
+
+    # Copy all files except .git and .gitignore to /etc/nixos
+    echo "Copying configuration to /etc/nixos..."
+    rsync -av --exclude='.git' --exclude='.gitignore' "$NIXOS_DOT_DIR/" "$NIXOS_CONFIG_DIR/"
+
+    # Run dotfiles sync
+    echo "Running dotfiles sync..."
+    dotfiles-sync
+
+    echo "NixOS Rebuilding..."
+    nixos-rebuild switch --flake /etc/nixos#nixos
+
+    # Create setup flag
+    sudo -u $ACTUAL_USER touch "$SETUP_FLAG"
+
 else
-    init_git_repo
-    copy_dotfiles
+    # Regular sync
+    echo "Regular sync detected..."
+
+    cd "$NIXOS_DOT_DIR"
+    setup_git_config
+
+    # Copy current NixOS config to dot directory
+    echo "Copying NixOS configuration to dot directory..."
+    rsync -av --exclude='hardware-configuration.nix' --chown="$ACTUAL_USER" "$NIXOS_CONFIG_DIR/" "$NIXOS_DOT_DIR/"
+
+    sudo -u $ACTUAL_USER git add .
+
+    if ! sudo -u $ACTUAL_USER git diff --quiet || ! sudo -u $ACTUAL_USER git diff --cached --quiet; then
+        echo "Changes detected, proceeding with rebuild and commit..."
+
+        echo "NixOS Rebuilding..."
+        nixos-rebuild switch --flake /etc/nixos#nixos &> nixos-switch.log || (cat nixos-switch.log | grep --color error && exit 1)
+        current=$(nixos-rebuild list-generations | grep current)
+
+        sudo -u $ACTUAL_USER git commit -m "$current"
+
+        # Ensure we're on the main branch or create it if it doesn't exist
+        sudo -u $ACTUAL_USER git fetch origin
+        if ! sudo -u $ACTUAL_USER git rev-parse --verify main; then
+            echo "Branch 'main' does not exist. Creating it..."
+            sudo -u $ACTUAL_USER git checkout -b main
+        else
+            echo "Checking out main branch..."
+            sudo -u $ACTUAL_USER git checkout main
+        fi
+
+        # Push changes to the main branch
+        sudo -u $ACTUAL_USER git push origin main
+
+        # Notify of successful rebuild
+        sudo -u $ACTUAL_USER DBUS_SESSION_BUS_ADDRESS="unix:path=/run/user/$(id -u $ACTUAL_USER)/bus" notify-send "NixOS Rebuilt OK!" --icon=software-update-available
+    else
+        echo "No changes detected, skipping rebuild and commit."
+    fi
 fi
-
-# Stow all dotfiles
-echo "Stowing dotfiles..." | tee -a "$TEMP_FILE"
-if ! stow -vR --adopt . -d "$DOTFILES_PATH" -t "$ACTUAL_HOME" 2> >(tee -a "$FAILURE_LOG" >&2); then
-    echo "Some files could not be stowed. Check the failure log for details." | tee -a "$TEMP_FILE"
-    sudo -u "$ACTUAL_USER" DBUS_SESSION_BUS_ADDRESS="unix:path=/run/user/$(id -u $ACTUAL_USER)/bus" notify-send "Stow Failure" "Some dotfiles could not be stowed. Check the failure log at: $FAILURE_LOG" --icon=dialog-error
-fi
-
-# Git operations
-cd "$DOTFILES_PATH"
-
-if ! sudo -u "$ACTUAL_USER" git diff --quiet || ! sudo -u "$ACTUAL_USER" git ls-files --others --exclude-standard --quiet; then
-    echo "Changes detected, committing..." | tee -a "$TEMP_FILE"
-    sudo -u "$ACTUAL_USER" git add .
-    sudo -u "$ACTUAL_USER" git commit -m "Updated dotfiles: $(date '+%Y-%m-%d %H:%M:%S')"
-    sudo -u "$ACTUAL_USER" git push -u origin main
-else
-    echo "No changes detected, skipping commit."
-fi
-
-echo "Log file available at: $TEMP_FILE"
-echo "Failure log file available at: $FAILURE_LOG"
