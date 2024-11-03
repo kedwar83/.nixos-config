@@ -161,19 +161,17 @@ in {
       grub.useOSProber = true;
       grub.enableCryptodisk = true;
     };
-
     initrd = {
       luks.devices = {
-          "luks-e46709e6-bc9a-4847-8d17-b04b4e919bf7" = {
-            device = "/dev/disk/by-uuid/e46709e6-bc9a-4847-8d17-b04b4e919bf7";
-            keyFile = "/boot/crypto_keyfile.bin";
+        "luks-e8a21db0-9d33-4155-b12e-d4aeb57b9bd0" = {
+          device = "/dev/disk/by-uuid/e8a21db0-9d33-4155-b12e-d4aeb57b9bd0";
+          keyFile = "/boot/crypto_keyfile.bin";
         };
-        "luks-4900bfd5-0cf1-4622-a0d4-544f3d85c205" = {
-            device = "/dev/disk/by-uuid/4900bfd5-0cf1-4622-a0d4-544f3d85c205";
-            keyFile = "/boot/crypto_keyfile.bin";
+        "luks-a0b27b0a-f8ac-4904-a1ad-b6aef0a82435" = {
+          device = "/dev/disk/by-uuid/a0b27b0a-f8ac-4904-a1ad-b6aef0a82435";
+          keyFile = "/boot/crypto_keyfile.bin";
         };
       };
-
       secrets = {
         "/boot/crypto_keyfile.bin" = null;
       };
