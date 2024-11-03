@@ -42,20 +42,98 @@ setup_git_config() {
     fi
 }
 
-# First time setup
+generate_luks_config() {
+    local config_file="$NIXOS_DOT_DIR/configuration.nix"
+    local temp_file=$(mktemp)
+    
+    # Find the boot device (assuming it's an NVMe drive)
+    local boot_device=$(findmnt -n -o SOURCE /boot | grep -o '/dev/nvme[0-9]n[0-9]')
+    
+    # Get LUKS device UUIDs
+    local luks_uuids=($(blkid | grep "TYPE=\"crypto_LUKS\"" | grep -o "UUID=\"[^\"]*\"" | cut -d'"' -f2))
+    
+    # Generate the boot configuration section
+    cat > "$temp_file" << EOL
+  boot = {
+    loader = {
+      grub.enable = true;
+      grub.device = "${boot_device}";
+      grub.useOSProber = true;
+      grub.enableCryptodisk = true;
+    };
+    initrd = {
+      luks.devices = {
+EOL
+    
+    # Add each LUKS device to the configuration
+    for uuid in "${luks_uuids[@]}"; do
+        cat >> "$temp_file" << EOL
+        "luks-${uuid}" = {
+          device = "/dev/disk/by-uuid/${uuid}";
+          keyFile = "/boot/crypto_keyfile.bin";
+        };
+EOL
+    done
+    
+    # Close the configuration section
+    cat >> "$temp_file" << EOL
+      };
+      secrets = {
+        "/boot/crypto_keyfile.bin" = null;
+      };
+    };
+  };
+EOL
+    
+    # Replace the boot configuration section in the original file
+    if [ -f "$config_file" ]; then
+        # Create a backup
+        cp "$config_file" "${config_file}.backup"
+        
+        # Replace the boot configuration section
+        awk -v replacement="$(cat $temp_file)" '
+        /^[[:space:]]*boot[[:space:]]*=[[:space:]]*{/ {
+            print replacement
+            in_boot_section=1
+            next
+        }
+        in_boot_section {
+            if (match($0, /^[[:space:]]*};[[:space:]]*$/)) {
+                in_boot_section=0
+                next
+            }
+            if (in_boot_section) next
+        }
+        {print}
+        ' "${config_file}.backup" > "$config_file"
+        
+        # Clean up
+        rm "$temp_file"
+        echo "LUKS configuration updated successfully."
+    else
+        echo "Error: configuration.nix not found in $NIXOS_DOT_DIR"
+        rm "$temp_file"
+        return 1
+    fi
+}
+
+# In the first-time setup section, before the rsync command:
 if [ ! -f "$SETUP_FLAG" ]; then
     echo "First-time setup detected..."
-
+    # Generate LUKS configuration
+    echo "Generating LUKS configuration..."
+    generate_luks_config
+    
     # Copy all files except .git and .gitignore to /etc/nixos
     echo "Copying configuration to /etc/nixos..."
     rsync -av --exclude='.git' --exclude='.gitignore' "$NIXOS_DOT_DIR/" "$NIXOS_CONFIG_DIR/"
 
+    echo "NixOS Rebuilding..."
+    nixos-rebuild switch --flake /etc/nixos#nixos
+
     # Run dotfiles sync
     echo "Running dotfiles sync..."
     dotfiles-sync
-
-    echo "NixOS Rebuilding..."
-    nixos-rebuild switch --flake /etc/nixos#nixos
 
     # Create setup flag
     sudo -u $ACTUAL_USER touch "$SETUP_FLAG"
