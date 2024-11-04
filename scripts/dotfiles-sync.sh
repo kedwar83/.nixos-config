@@ -1,4 +1,11 @@
 #!/bin/bash
+
+# Self-elevate if not already root
+if [ "$(id -u)" != "0" ]; then
+    echo "This script requires elevated privileges. Prompting for sudo..."
+    exec sudo "$0" "$@"
+fi
+
 set -e
 
 # Configuration
@@ -54,7 +61,7 @@ EXCLUSIONS=(
     --exclude=".config/Signal\ Beta/SingletonLock"
     --exclude=".config/Signal\ Beta/SingletonSocket"
     --exclude=".local/state/nix/profiles/home-manager"
-    --exclude=".nix-config"
+    --exclude=".nixos-config"
     --exclude=".system_setup_complete"
 )
 # Initialize/check git repository

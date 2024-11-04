@@ -1,7 +1,14 @@
 #!/usr/bin/env bash
+
+# Self-elevate if not already root
+if [ "$(id -u)" != "0" ]; then
+    echo "This script requires elevated privileges. Prompting for sudo..."
+    exec sudo "$0" "$@"
+fi
+
 set -e
 
-ACTUAL_USER=${SUDO_USER:-$USER}
+ACTUAL_USER=${SUDO_USER:-$LOGNAME}
 NIXOS_CONFIG_DIR="/etc/nixos"
 NIXOS_DOT_DIR="/home/$ACTUAL_USER/.nixos-config"
 CURRENT_USER=$(id -un $ACTUAL_USER)
@@ -45,13 +52,13 @@ setup_git_config() {
 generate_luks_config() {
     local config_file="$NIXOS_DOT_DIR/configuration.nix"
     local temp_file=$(mktemp)
-    
+
     # Find the boot device (assuming it's an NVMe drive)
     local boot_device=$(findmnt -n -o SOURCE /boot | grep -o '/dev/nvme[0-9]n[0-9]')
-    
+
     # Get LUKS device UUIDs
     local luks_uuids=($(blkid | grep "TYPE=\"crypto_LUKS\"" | grep -o "UUID=\"[^\"]*\"" | cut -d'"' -f2))
-    
+
     # Generate the boot configuration section
     cat > "$temp_file" << EOL
   boot = {
@@ -64,7 +71,7 @@ generate_luks_config() {
     initrd = {
       luks.devices = {
 EOL
-    
+
     # Add each LUKS device to the configuration
     for uuid in "${luks_uuids[@]}"; do
         cat >> "$temp_file" << EOL
@@ -74,7 +81,7 @@ EOL
         };
 EOL
     done
-    
+
     # Close the configuration section
     cat >> "$temp_file" << EOL
       };
@@ -84,12 +91,12 @@ EOL
     };
   };
 EOL
-    
+
     # Replace the boot configuration section in the original file
     if [ -f "$config_file" ]; then
         # Create a backup
         cp "$config_file" "${config_file}.backup"
-        
+
         # Replace the boot configuration section
         awk -v replacement="$(cat $temp_file)" '
         /^[[:space:]]*boot[[:space:]]*=[[:space:]]*{/ {
@@ -106,7 +113,7 @@ EOL
         }
         {print}
         ' "${config_file}.backup" > "$config_file"
-        
+
         # Clean up
         rm "$temp_file"
         echo "LUKS configuration updated successfully."
@@ -123,7 +130,7 @@ if [ ! -f "$SETUP_FLAG" ]; then
     # Generate LUKS configuration
     echo "Generating LUKS configuration..."
     generate_luks_config
-    
+
     # Copy all files except .git and .gitignore to /etc/nixos
     echo "Copying configuration to /etc/nixos..."
     rsync -av --exclude='.git' --exclude='.gitignore' "$NIXOS_DOT_DIR/" "$NIXOS_CONFIG_DIR/"
