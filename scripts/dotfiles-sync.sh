@@ -1,18 +1,9 @@
 #!/bin/bash
 
-if [ "$(id -u)" != "0" ]; then
-    echo "This script requires elevated privileges. Prompting for sudo..."
-    if ! sudo -v; then
-        echo "Failed to obtain sudo privileges"
-        exit 1
-    fi
-    sudo "$0" "$@"
-    exit $?
-fi
-
 set -e
 
-ACTUAL_USER=${SUDO_USER:-$LOGNAME}
+# Configuration
+ACTUAL_USER=${SUDO_USER:-$USER}
 ACTUAL_HOME="/home/$ACTUAL_USER"
 REPO_PATH="$ACTUAL_HOME/.dotfiles"
 DOTFILES_PATH="$REPO_PATH"
@@ -20,6 +11,7 @@ CURRENT_USER=$(id -un $ACTUAL_USER)
 TEMP_FILE=$(mktemp)
 FAILURE_LOG="$DOTFILES_PATH/failure_log.txt"
 SETUP_FLAG="$ACTUAL_HOME/.system_setup_complete"
+
 echo "Running as user: $CURRENT_USER"
 echo "Home directory: $ACTUAL_HOME"
 echo "Repo and Dotfiles path: $REPO_PATH"

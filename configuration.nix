@@ -205,9 +205,18 @@ in {
       {
         users = [ username ];
         commands = [
-          { command = "${nixosSyncScript}/bin/nixos-sync.sh"; }
-          { command = "${dotfilesSyncScript}/bin/dotfiles-sync.sh"; }
-          { command = "${serviceMonitorScript}/bin/service-monitor.sh"; }
+          {
+            command = "${nixosSyncScript}/bin/nixos-sync.sh";
+            options = [ "PASSWD" ];  # Requires password authentication
+          }
+          {
+            command = "${dotfilesSyncScript}/bin/dotfiles-sync.sh";
+            options = [ "PASSWD" ];  # Requires password authentication
+          }
+          {
+            command = "${serviceMonitorScript}/bin/service-monitor.sh";
+            options = [ "NOPASSWD" ];  # Keeping this one password-less since it's a monitoring script
+          }
         ];
       }
     ];

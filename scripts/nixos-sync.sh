@@ -1,19 +1,7 @@
 #!/usr/bin/env bash
-
-# Self-elevate if not already root
-if [ "$(id -u)" != "0" ]; then
-    echo "This script requires elevated privileges. Prompting for sudo..."
-    if ! sudo -v; then
-        echo "Failed to obtain sudo privileges"
-        exit 1
-    fi
-    sudo "$0" "$@"
-    exit $?
-fi
-
 set -e
 
-ACTUAL_USER=${SUDO_USER:-$LOGNAME}
+ACTUAL_USER=${SUDO_USER:-$USER}
 NIXOS_CONFIG_DIR="/etc/nixos"
 NIXOS_DOT_DIR="/home/$ACTUAL_USER/.nixos-config"
 CURRENT_USER=$(id -un $ACTUAL_USER)
