@@ -9,9 +9,15 @@
       inputs.nixpkgs.follows = "nixpkgs";
     };
   };
-  outputs = { self, nixpkgs, firefox, home-manager, ... } @ inputs: {
+  outputs = {
+    self,
+    nixpkgs,
+    firefox,
+    home-manager,
+    ...
+  } @ inputs: {
     nixosConfigurations.nixos = nixpkgs.lib.nixosSystem {
-      specialArgs = { inherit inputs; };
+      specialArgs = {inherit inputs;};
       modules = [
         ./configuration.nix
         home-manager.nixosModules.home-manager

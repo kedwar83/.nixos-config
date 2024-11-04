@@ -9,17 +9,20 @@
   username = "keganre";
 
   # Create executable script derivations
-  mkScript = name: text: pkgs.writeScriptBin name text;
+  mkScript = name: text: pkgs.writeShellScriptBin name text;
 
   # Define scripts with executable permissions
   dotfilesSyncScript = mkScript "dotfiles-sync" ''
-  #!${pkgs.bash}/bin/bash
-  ${builtins.readFile ./scripts/dotfiles-sync.sh}
-'';
+    ${builtins.readFile ./scripts/dotfiles-sync.sh}
+  '';
 
-  nixosSyncScript = mkScript "nixos-sync" (builtins.readFile ./scripts/nixos-sync.sh);
-  serviceMonitorScript = mkScript "service-monitor" (builtins.readFile ./scripts/service-monitor.sh);
+  nixosSyncScript = mkScript "nixos-sync" ''
+    ${builtins.readFile ./scripts/nixos-sync.sh}
+  '';
 
+  serviceMonitorScript = mkScript "service-monitor" ''
+    ${builtins.readFile ./scripts/service-monitor.sh}
+  '';
 in {
   networking = {
     hostName = hostname;
@@ -82,8 +85,8 @@ in {
   systemd = {
     user.services.mpris-proxy = {
       description = "Mpris proxy";
-      after = [ "network.target" "sound.target" ];
-      wantedBy = [ "default.target" ];
+      after = ["network.target" "sound.target"];
+      wantedBy = ["default.target"];
       serviceConfig.ExecStart = "${pkgs.bluez}/bin/mpris-proxy";
     };
     services = {
@@ -102,17 +105,18 @@ in {
         ];
         serviceConfig = {
           Type = "oneshot";
-          ExecStart = "${dotfilesSyncScript}/bin/dotfiles-sync.sh";
-          User = "root";
+          ExecStart = "${dotfilesSyncScript}/bin/dotfiles-sync"; # Remove .sh extension
+          User = username; # Changed from root to username
+          Group = "users";
           IOSchedulingClass = "idle";
           CPUSchedulingPolicy = "idle";
         };
         environment = {
           GIT_SSH_COMMAND = "ssh -i /home/${username}/.ssh/id_ed25519";
-          HOME = "/root";
+          HOME = "/home/${username}"; # Changed from /root
         };
-        wants = [ "dbus.socket" ];
-        after = [ "dbus.socket" ];
+        wants = ["dbus.socket"];
+        after = ["dbus.socket"];
       };
 
       service-monitor = {
@@ -128,17 +132,18 @@ in {
         ];
         serviceConfig = {
           Type = "oneshot";
-          ExecStart = "${serviceMonitorScript}/bin/service-monitor.sh";
-          User = "root";
+          ExecStart = "${serviceMonitorScript}/bin/service-monitor"; # Remove .sh extension
+          User = username; # Changed from root to username
+          Group = "users";
         };
-        after = [ "nixos-upgrade.service" "dotfiles-sync.service" ];
+        after = ["nixos-upgrade.service" "dotfiles-sync.service"];
       };
     };
 
     timers = {
       dotfiles-sync = {
         description = "Timer for dotfiles sync service";
-        wantedBy = [ "timers.target" ];
+        wantedBy = ["timers.target"];
         timerConfig = {
           OnCalendar = "04:00:00";
           Persistent = true;
@@ -148,7 +153,7 @@ in {
 
       service-monitor = {
         description = "Timer for service monitoring";
-        wantedBy = [ "timers.target" ];
+        wantedBy = ["timers.target"];
         timerConfig = {
           OnCalendar = "04:00:00";
           Persistent = true;
@@ -203,19 +208,19 @@ in {
 
     sudo.extraRules = [
       {
-        users = [ username ];
+        users = [username];
         commands = [
           {
-            command = "${nixosSyncScript}/bin/nixos-sync.sh";
-            options = [ "PASSWD" ];  # Requires password authentication
+            command = "${nixosSyncScript}/bin/nixos-sync";
+            options = ["PASSWD"];
           }
           {
-            command = "${dotfilesSyncScript}/bin/dotfiles-sync.sh";
-            options = [ "PASSWD" ];  # Requires password authentication
+            command = "${dotfilesSyncScript}/bin/dotfiles-sync";
+            options = ["PASSWD"];
           }
           {
-            command = "${serviceMonitorScript}/bin/service-monitor.sh";
-            options = [ "NOPASSWD" ];  # Keeping this one password-less since it's a monitoring script
+            command = "${serviceMonitorScript}/bin/service-monitor";
+            options = ["NOPASSWD"];
           }
         ];
       }
@@ -249,7 +254,7 @@ in {
 
   # Home Manager configuration
   home-manager.backupFileExtension = "backup";
-  home-manager.users.${username} = { pkgs, ... }: {
+  home-manager.users.${username} = {pkgs, ...}: {
     home = {
       username = username;
       homeDirectory = "/home/${username}";
@@ -329,10 +334,10 @@ in {
 
   environment = {
     systemPackages = with pkgs; [
-        # Add scripts directly to system packages
-        dotfilesSyncScript
-        nixosSyncScript
-        serviceMonitorScript
+      # Add scripts directly to system packages
+      dotfilesSyncScript
+      nixosSyncScript
+      serviceMonitorScript
     ];
   };
 
