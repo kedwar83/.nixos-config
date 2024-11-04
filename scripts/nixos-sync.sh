@@ -168,7 +168,8 @@ else
         sudo -u $ACTUAL_USER git -C "$NIXOS_DOT_DIR" push origin main
 
         # Notify user
-        notify-send 'NixOS Rebuilt OK!' --icon=software-update-available
+        sudo -u $ACTUAL_USER DISPLAY=$DISPLAY XAUTHORITY=$XAUTHORITY notify-send 'NixOS Rebuilt OK!' --icon=software-update-available
+
     else
         echo 'No changes detected, skipping rebuild and commit.'
     fi
