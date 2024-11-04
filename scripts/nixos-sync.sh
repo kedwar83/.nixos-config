@@ -112,7 +112,8 @@ if [ ! -f "$SETUP_FLAG" ]; then
     generate_luks_config
 
     echo "Copying configuration to /etc/nixos..."
-    sudo rsync -av --exclude='.git' --exclude='.gitignore' --chown=root "$NIXOS_DOT_DIR/" "$NIXOS_CONFIG_DIR/"
+    rsync -av --exclude='.git' --exclude='.gitignore' "$NIXOS_DOT_DIR/" "$NIXOS_CONFIG_DIR/"
+    chown -R root $NIXOS_CONFIG_DIR
 
     echo "NixOS Rebuilding..."
     nixos-rebuild switch --flake /etc/nixos#nixos
@@ -133,7 +134,8 @@ else
 
     # Copying NixOS configuration to the dot directory
     echo 'Copying NixOS configuration to dot directory...'
-    sudo rsync -av --exclude='hardware-configuration.nix' --chown="$CURRENT_USER" "$NIXOS_CONFIG_DIR/" "$NIXOS_DOT_DIR/"
+    rsync -av --exclude='hardware-configuration.nix' "$NIXOS_CONFIG_DIR/" "$NIXOS_DOT_DIR/"
+    chown -R $CURRENT_USER $NIXOS_DOT_DIR
 
     # Adding changes to git
     sudo -u $ACTUAL_USER git -C "$NIXOS_DOT_DIR" add .
@@ -144,7 +146,7 @@ else
 
         # NixOS rebuilding
         echo 'NixOS Rebuilding...'
-        sudo nixos-rebuild switch --flake /etc/nixos#nixos &> /tmp/nixos-switch.log || (cat /tmp/nixos-switch.log | grep --color error && exit 1)
+        nixos-rebuild switch --flake /etc/nixos#nixos &> /tmp/nixos-switch.log || (cat /tmp/nixos-switch.log | grep --color error && exit 1)
 
         # Get the current NixOS generation again
         current=$(nixos-rebuild list-generations | grep current)
@@ -166,7 +168,7 @@ else
         sudo -u $ACTUAL_USER git -C "$NIXOS_DOT_DIR" push origin main
 
         # Notify user
-        DBUS_SESSION_BUS_ADDRESS="unix:path=/run/user/$(id -u)/bus" notify-send 'NixOS Rebuilt OK!' --icon=software-update-available
+        sudo -u DBUS_SESSION_BUS_ADDRESS="unix:path=/run/user/$(id -u)/bus" notify-send 'NixOS Rebuilt OK!' --icon=software-update-available
     else
         echo 'No changes detected, skipping rebuild and commit.'
     fi
