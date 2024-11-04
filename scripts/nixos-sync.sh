@@ -112,7 +112,7 @@ if [ ! -f "$SETUP_FLAG" ]; then
     generate_luks_config
 
     echo "Copying configuration to /etc/nixos..."
-    rsync -av --exclude='.git' --exclude='.gitignore' "$NIXOS_DOT_DIR/" "$NIXOS_CONFIG_DIR/"
+    rsync -av --exclude='README.md' --exclude='.git' --exclude='.gitignore' "$NIXOS_DOT_DIR/" "$NIXOS_CONFIG_DIR/"
     chown -R root $NIXOS_CONFIG_DIR
 
     echo "NixOS Rebuilding..."
