@@ -3,7 +3,12 @@
 # Self-elevate if not already root
 if [ "$(id -u)" != "0" ]; then
     echo "This script requires elevated privileges. Prompting for sudo..."
-    exec sudo "$0" "$@"
+    if ! sudo -v; then
+        echo "Failed to obtain sudo privileges"
+        exit 1
+    fi
+    sudo "$0" "$@"
+    exit $?
 fi
 
 set -e
