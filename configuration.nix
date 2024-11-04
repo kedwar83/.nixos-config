@@ -40,6 +40,7 @@ in {
   };
 
   services = {
+    input-remapper.enable = true;
     avahi.enable = true;
     geoclue2.enable = true;
     blueman.enable = true;
