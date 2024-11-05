@@ -281,6 +281,7 @@ in {
         qbittorrent
         stow
         mpv
+        neovim
       ];
     };
     services.darkman = {
