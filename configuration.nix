@@ -106,15 +106,15 @@ in {
         ];
         serviceConfig = {
           Type = "oneshot";
-          ExecStart = "${dotfilesSyncScript}/bin/dotfiles-sync"; # Remove .sh extension
-          User = username; # Changed from root to username
+          ExecStart = "${dotfilesSyncScript}/bin/dotfiles-sync";
+          User = username;
           Group = "users";
           IOSchedulingClass = "idle";
           CPUSchedulingPolicy = "idle";
         };
         environment = {
           GIT_SSH_COMMAND = "ssh -i /home/${username}/.ssh/id_ed25519";
-          HOME = "/home/${username}"; # Changed from /root
+          HOME = "/home/${username}";
         };
         wants = ["dbus.socket"];
         after = ["dbus.socket"];
@@ -133,8 +133,8 @@ in {
         ];
         serviceConfig = {
           Type = "oneshot";
-          ExecStart = "${serviceMonitorScript}/bin/service-monitor"; # Remove .sh extension
-          User = username; # Changed from root to username
+          ExecStart = "${serviceMonitorScript}/bin/service-monitor";
+          User = username;
           Group = "users";
         };
         after = ["nixos-upgrade.service" "dotfiles-sync.service"];
@@ -329,7 +329,6 @@ in {
       };
     };
 
-    # Additional Home Manager configurations
     programs = {
       home-manager.enable = true;
       git.enable = true;
@@ -338,10 +337,21 @@ in {
 
   environment = {
     systemPackages = with pkgs; [
-      # Add scripts directly to system packages
+      # System scripts
       dotfilesSyncScript
       nixosSyncScript
       serviceMonitorScript
+
+      # Development Tools
+      gcc-unwrapped # Provides g++ binary
+      gcc # GNU Compiler Collection
+      gnumake
+      binutils # Collection of binary tools
+      glibc # GNU C Library
+      glibc.dev # GNU C Library development files
+      python3 # Python interpreter
+      python3Packages.pip
+      python3Packages.virtualenv
     ];
   };
 
