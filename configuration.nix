@@ -282,8 +282,10 @@ in {
         stow
         mpv
         neovim
+        libgcc
       ];
     };
+
     services.darkman = {
       enable = true;
       settings = {
