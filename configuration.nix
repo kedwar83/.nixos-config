@@ -102,9 +102,9 @@ in {
             "/dev/input/event*"
           ];
           # Run as the current user
-          User = "%I";
+          User = "${username}";
           # Use the current user's home directory
-          WorkingDirectory = "%h";
+          WorkingDirectory = "/home/${username}";
         };
       };
     };
