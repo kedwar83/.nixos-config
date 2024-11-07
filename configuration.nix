@@ -84,11 +84,29 @@ in {
   };
 
   systemd = {
-    user.services.mpris-proxy = {
-      description = "Mpris proxy";
-      after = ["network.target" "sound.target"];
-      wantedBy = ["default.target"];
-      serviceConfig.ExecStart = "${pkgs.bluez}/bin/mpris-proxy";
+    user.services = {
+      mpris-proxy = {
+        description = "Mpris proxy";
+        after = ["network.target" "sound.target"];
+        wantedBy = ["default.target"];
+        serviceConfig.ExecStart = "${pkgs.bluez}/bin/mpris-proxy";
+      };
+      input-remapper = {
+        description = "Input Remapper";
+        wantedBy = ["graphical-session.target"];
+        serviceConfig = {
+          ExecStart = "${pkgs.input-remapper}/bin/input-remapper";
+          Restart = "on-failure";
+          # Grant access to input devices
+          DeviceAllow = [
+            "/dev/input/event*"
+          ];
+          # Run as the current user
+          User = "%I";
+          # Use the current user's home directory
+          WorkingDirectory = "%h";
+        };
+      };
     };
     services = {
       dotfiles-sync = {
