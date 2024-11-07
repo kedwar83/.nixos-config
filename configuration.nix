@@ -124,7 +124,7 @@ in {
         description = "Reload input-remapper config after sleep";
         after = ["suspend.target"];
         serviceConfig = {
-          User = "pierre";
+          User = "keganre";
           Type = "forking";
         };
         script = lib.getExe (pkgs.writeShellApplication {
