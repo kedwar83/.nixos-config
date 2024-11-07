@@ -84,31 +84,66 @@ in {
   };
 
   systemd = {
-    user.services = {
-      mpris-proxy = {
-        description = "Mpris proxy";
-        after = ["network.target" "sound.target"];
-        wantedBy = ["default.target"];
-        serviceConfig.ExecStart = "${pkgs.bluez}/bin/mpris-proxy";
-      };
-      input-remapper = {
-        description = "Input Remapper";
-        wantedBy = ["graphical-session.target"];
-        serviceConfig = {
-          ExecStart = "${pkgs.input-remapper}/bin/input-remapper";
-          Restart = "on-failure";
-          # Grant access to input devices
-          DeviceAllow = [
-            "/dev/input/event*"
-          ];
-          # Run as the current user
-          User = "${username}";
-          # Use the current user's home directory
-          WorkingDirectory = "/home/${username}";
-        };
-      };
+    user.services.mpris-proxy = {
+      description = "Mpris proxy";
+      after = ["network.target" "sound.target"];
+      wantedBy = ["default.target"];
+      serviceConfig.ExecStart = "${pkgs.bluez}/bin/mpris-proxy";
     };
     services = {
+      StartInputRemapperDaemonAtLogin = {
+        enable = true;
+        description = "Start input-remapper daemon after login";
+        serviceConfig = {
+          Type = "simple";
+        };
+        script = lib.getExe (pkgs.writeShellApplication {
+          name = "start-input-mapper-daemon";
+          runtimeInputs = with pkgs; [input-remapper procps su];
+          text = ''
+            until pgrep -u pierre; do
+              sleep 1
+            done
+            sleep 2
+            until [ $(pgrep -c -u root "input-remapper") -gt 1 ]; do
+              input-remapper-service&
+              sleep 1
+              input-remapper-reader-service&
+              sleep 1
+            done
+            su pierre -c "input-remapper-control --command stop-all"
+            su pierre -c "input-remapper-control --command autoload"
+            sleep infinity
+          '';
+        });
+        wantedBy = ["default.target"];
+      };
+
+      ReloadInputRemapperAfterSleep = {
+        enable = true;
+        description = "Reload input-remapper config after sleep";
+        after = ["suspend.target"];
+        serviceConfig = {
+          User = "pierre";
+          Type = "forking";
+        };
+        script = lib.getExe (pkgs.writeShellApplication {
+          name = "reload-input-mapper-config";
+          runtimeInputs = with pkgs; [input-remapper ps gawk];
+          text = ''
+            input-remapper-control --command stop-all
+            input-remapper-control --command autoload
+            sleep 1
+            until [[ $(ps aux | awk '$11~"input-remapper" && $12="<defunct>" {print $0}' | wc -l) -eq 0 ]]; do
+              input-remapper-control --command stop-all
+              input-remapper-control --command autoload
+              sleep 1
+            done
+          '';
+        });
+        wantedBy = ["suspend.target"];
+      };
+
       dotfiles-sync = {
         description = "Sync dotfiles to git repository";
         path = with pkgs; [
