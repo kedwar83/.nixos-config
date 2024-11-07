@@ -111,8 +111,8 @@ in {
               input-remapper-reader-service&
               sleep 1
             done
-            su pierre -c "input-remapper-control --command stop-all"
-            su pierre -c "input-remapper-control --command autoload"
+            su keganre -c "input-remapper-control --command stop-all"
+            su keganre -c "input-remapper-control --command autoload"
             sleep infinity
           '';
         });
@@ -143,7 +143,6 @@ in {
         });
         wantedBy = ["suspend.target"];
       };
-
       dotfiles-sync = {
         description = "Sync dotfiles to git repository";
         path = with pkgs; [
