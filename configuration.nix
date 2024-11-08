@@ -310,7 +310,7 @@ in {
       packages = with pkgs; [
         git
         alejandra
-        inputs.firefox.packages.${pkgs.system}.firefox-nightly-bin
+        firefox-devedition-unwrapped
         signal-desktop-beta
         kdePackages.kdeplasma-addons
         ollama
