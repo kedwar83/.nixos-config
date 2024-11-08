@@ -299,85 +299,87 @@ in {
     ];
   };
 
-  # Home Manager configuration
-  home-manager.backupFileExtension = "backup";
-  home-manager.users.${username} = {pkgs, ...}: {
-    home = {
-      username = username;
-      homeDirectory = "/home/${username}";
-      stateVersion = "24.05";
+  home-manager = {
+    backupFileExtension = "backup";
+    users.${username} = {pkgs, ...}: {
+      home = {
+        username = username;
+        homeDirectory = "/home/${username}";
+        stateVersion = "24.05";
 
-      packages = with pkgs; [
-        git
-        alejandra
-        inputs.firefox.packages.${pkgs.system}.firefox-nightly-bin
-        signal-desktop-beta
-        kdePackages.kdeplasma-addons
-        ollama
-        strawberry-qt6
-        steam
-        gimp-with-plugins
-        vscodium
-        gh
-        libnotify
-        input-remapper
-        darkman
-        joplin-desktop
-        mullvad-vpn
-        qbittorrent
-        stow
-        mpv
-        neovim
-        libgcc
-      ];
-    };
-
-    services.darkman = {
-      enable = true;
-      settings = {
-        usegeoclue = true;
+        packages = with pkgs; [
+          git
+          alejandra
+          inputs.firefox.packages.${pkgs.system}.firefox-nightly-bin
+          signal-desktop-beta
+          kdePackages.kdeplasma-addons
+          ollama
+          strawberry-qt6
+          steam
+          gimp-with-plugins
+          vscodium
+          gh
+          libnotify
+          input-remapper
+          darkman
+          joplin-desktop
+          mullvad-vpn
+          qbittorrent
+          stow
+          mpv
+          neovim
+          libgcc
+          brave
+        ];
       };
 
-      darkModeScripts = {
-        "kde-plasma.sh" = ''
-          #!/bin/sh
-          lookandfeeltool -platform offscreen --apply "org.kde.breezedark.desktop"
-        '';
+      services.darkman = {
+        enable = true;
+        settings = {
+          usegeoclue = true;
+        };
 
-        "kde-konsole-theme.sh" = ''
-          #!/usr/bin/env bash
-          PROFILE='Breath'
-          for pid in $(pidof konsole); do
-            qdbus "org.kde.konsole-$pid" "/Windows/1" setDefaultProfile "$PROFILE"
-            for session in $(qdbus "org.kde.konsole-$pid" /Windows/1 sessionList); do
-              qdbus "org.kde.konsole-$pid" "/Sessions/$session" setProfile "$PROFILE"
+        darkModeScripts = {
+          "kde-plasma.sh" = ''
+            #!/bin/sh
+            lookandfeeltool -platform offscreen --apply "org.kde.breezedark.desktop"
+          '';
+
+          "kde-konsole-theme.sh" = ''
+            #!/usr/bin/env bash
+            PROFILE='Breath'
+            for pid in $(pidof konsole); do
+              qdbus "org.kde.konsole-$pid" "/Windows/1" setDefaultProfile "$PROFILE"
+              for session in $(qdbus "org.kde.konsole-$pid" /Windows/1 sessionList); do
+                qdbus "org.kde.konsole-$pid" "/Sessions/$session" setProfile "$PROFILE"
+              done
             done
-          done
-        '';
-      };
+          '';
+        };
 
-      lightModeScripts = {
-        "kde-plasma.sh" = ''
-          #!/bin/sh
-          lookandfeeltool -platform offscreen --apply "org.kde.breeze.desktop"
-        '';
+        lightModeScripts = {
+          "kde-plasma.sh" = ''
+            #!/bin/sh
+            lookandfeeltool -platform offscreen --apply "org.kde.breeze.desktop"
+          '';
 
-        "kde-konsole-theme.sh" = ''
-          #!/usr/bin/env bash
-          PROFILE='Breath-light'
-          for pid in $(pidof konsole); do
-            qdbus "org.kde.konsole-$pid" "/Windows/1" setDefaultProfile "$PROFILE"
-            for session in $(qdbus "org.kde.konsole-$pid" /Windows/1 sessionList); do
-              qdbus "org.kde.konsole-$pid" "/Sessions/$session" setProfile "$PROFILE"
+          "kde-konsole-theme.sh" = ''
+            #!/usr/bin/env bash
+            PROFILE='Breath-light'
+            for pid in $(pidof konsole); do
+              qdbus "org.kde.konsole-$pid" "/Windows/1" setDefaultProfile "$PROFILE"
+              for session in $(qdbus "org.kde.konsole-$pid" /Windows/1 sessionList); do
+                qdbus "org.kde.konsole-$pid" "/Sessions/$session" setProfile "$PROFILE"
+              done
             done
-          done
-        '';
+          '';
+        };
       };
-    };
 
-    programs = {
-      home-manager.enable = true;
-      git.enable = true;
+      programs = {
+        home-manager.enable = true;
+        git.enable = true;
+      };
     };
   };
 
