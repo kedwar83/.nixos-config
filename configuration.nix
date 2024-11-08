@@ -310,8 +310,7 @@ in {
       packages = with pkgs; [
         git
         alejandra
-        firefox-devedition-unwrapped
-        floorp-unwrapped
+        librewolf-unwrapped
         signal-desktop-beta
         kdePackages.kdeplasma-addons
         ollama
