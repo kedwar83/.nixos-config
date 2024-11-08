@@ -288,13 +288,13 @@ in {
     kdeconnect.enable = true;
     steam.enable = true;
   };
-  /*
+
   xdg.mime.defaultApplications = {
     "text/html" = "firefox-nightly.desktop";
     "x-scheme-handler/http" = "firefox-nightly.desktop";
     "x-scheme-handler/https" = "firefox-nightly.desktop";
   };
-  */
+
   users.users.${username} = {
     isNormalUser = true;
     description = "Kegan Riley Edwards";
@@ -316,8 +316,7 @@ in {
       packages = with pkgs; [
         git
         alejandra
-        #inputs.firefox.packages.${pkgs.system}.firefox-nightly-bin
-        firefox-beta-unwrapped
+        inputs.firefox.packages.${pkgs.system}.firefox-nightly-bin
         signal-desktop-beta
         kdePackages.kdeplasma-addons
         ollama
