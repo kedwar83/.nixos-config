@@ -55,6 +55,7 @@ EXCLUSIONS=(
     --exclude=".local/state/nix/profiles/home-manager"
     --exclude=".nixos-config"
     --exclude=".system_setup_complete"
+    --exclude=".config/Joplin/Local\ Storage/leveldb    "
 )
 
 # Initialize/check git repository
