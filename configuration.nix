@@ -311,6 +311,7 @@ in {
         git
         alejandra
         firefox-devedition-unwrapped
+        brave
         signal-desktop-beta
         kdePackages.kdeplasma-addons
         ollama
