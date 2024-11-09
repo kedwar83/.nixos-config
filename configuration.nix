@@ -400,6 +400,7 @@ in {
       python3 # Python interpreter
       python3Packages.pip
       python3Packages.virtualenv
+      geoclue2
     ];
   };
 
