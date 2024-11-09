@@ -146,6 +146,7 @@ EXCLUSIONS=(
     --exclude=".config/Signal\ Beta/IndexedDB"
     --exclude=".config/Signal\ Beta/Local\ Storage"
     --exclude=".config/Signal\ Beta/Session\ Storage"
+    --exclude=".config/BraveSoftware/Brave-Browser/Default/IndexedDB"
 )
 
 # Initialize/check git repository
