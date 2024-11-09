@@ -18,44 +18,134 @@ echo "Failure log file: $FAILURE_LOG"
 
 # Exclusion list for rsync
 EXCLUSIONS=(
+    # System and general security files
     --exclude=".Xauthority"
     --exclude=".xsession-errors"
     --exclude=".bash_history"
+    --exclude=".ssh"
+    --exclude=".gnupg"
+    --exclude=".pki"
+
+    # General cache and temporary files
     --exclude=".cache"
     --exclude=".compose-cache"
     --exclude=".local/share/Trash/"
+    --exclude="*/recently-used.xbel"
+
+    # Development and build files
     --exclude=".steam"
     --exclude=".vscode"
     --exclude="node_modules"
+
+    # Nix-specific
     --exclude=".nix-profile"
     --exclude=".nix-defexpr"
     --exclude=".dotfiles"
+    --exclude=".local/state/nix/profiles/home-manager"
+    --exclude=".nixos-config"
+    --exclude=".system_setup_complete"
+
+    # Firefox profile data
     --exclude=".mozilla/firefox/*/storage"
     --exclude=".mozilla/firefox/*/cache2"
     --exclude=".mozilla/firefox/*/crashes"
     --exclude=".mozilla/firefox/*/minidumps"
+    # Cookie data (exclude) but not settings
     --exclude=".mozilla/firefox/*/cookies.sqlite"
     --exclude=".mozilla/firefox/*/cookies.sqlite.bak"
     --exclude=".mozilla/firefox/*/cookies.sqlite-wal"
+    --exclude=".mozilla/firefox/*/cookies.sqlite-shm"
     --exclude=".mozilla/firefox/*/cookies.sqlite.bak-rebuild"
+    # Security-sensitive data
     --exclude=".mozilla/firefox/*/key4.db"
     --exclude=".mozilla/firefox/*/logins-backup.json"
     --exclude=".mozilla/firefox/*/lock"
     --exclude=".mozilla/firefox/*/sessionstore-backups"
     --exclude=".mozilla/firefox/*/logins.json"
-    --exclude=".ssh"
+    --exclude=".mozilla/firefox/*/Login\ Data"
+    --exclude=".mozilla/firefox/*/Login\ Data-journal"
+    --exclude=".mozilla/firefox/*/Web\ Data"
+    --exclude=".mozilla/firefox/*/Web\ Data-journal"
+    --exclude=".mozilla/firefox/*/Local\ Storage"
+    --exclude=".mozilla/firefox/*/Service\ Worker"
+    --exclude=".mozilla/firefox/*/Network"
+    --exclude=".mozilla/firefox/*/GPUCache"
+    --exclude=".mozilla/firefox/*/sessionstore*"
+    --exclude=".mozilla/firefox/*/session*"
+    --exclude=".mozilla/firefox/*/formhistory.sqlite"
+    --exclude=".mozilla/firefox/*/autofill*"
+    --exclude=".mozilla/firefox/*/places.sqlite*"
+    --exclude=".mozilla/firefox/*/favicons.sqlite*"
+    --exclude=".mozilla/firefox/*/cert*.db"
+    --exclude=".mozilla/firefox/*/webappsstore.sqlite*"
+    --exclude=".mozilla/firefox/*/saved-telemetry-pings"
+    # Note: permissions.sqlite removed to keep cookie settings
+
+    # Brave Browser data
+    # Cookie data (exclude) but not settings
+    --exclude=".config/BraveSoftware/Brave-Browser/Default/Cookies"
+    --exclude=".config/BraveSoftware/Brave-Browser/Default/Cookies-journal"
+    --exclude=".config/BraveSoftware/Brave-Browser/Default/Extension\ Cookies"
+    --exclude=".config/BraveSoftware/Brave-Browser/Default/Extension\ Cookies-journal"
+    # Note: Preferences file not excluded to keep cookie settings
+    --exclude=".config/BraveSoftware/Brave-Browser/Default/Login\ Data"
+    --exclude=".config/BraveSoftware/Brave-Browser/Default/Login\ Data-journal"
+    --exclude=".config/BraveSoftware/Brave-Browser/Default/Web\ Data"
+    --exclude=".config/BraveSoftware/Brave-Browser/Default/Web\ Data-journal"
+    --exclude=".config/BraveSoftware/Brave-Browser/Default/*.log"
+    --exclude=".config/BraveSoftware/Brave-Browser/Default/Sessions"
+    --exclude=".config/BraveSoftware/Brave-Browser/Default/Local\ Storage"
+    --exclude=".config/BraveSoftware/Brave-Browser/Default/Service\ Worker"
+    --exclude=".config/BraveSoftware/Brave-Browser/Default/Cache"
+    --exclude=".config/BraveSoftware/Brave-Browser/Safe\ Browsing"
+    --exclude=".config/BraveSoftware/Brave-Browser/CertificateRevocation"
+    --exclude=".config/BraveSoftware/Brave-Browser/Default/GPUCache"
+    --exclude=".config/BraveSoftware/Brave-Browser/Default/Network"
+    --exclude=".config/BraveSoftware/Brave-Browser/Crash\ Reports"
+    --exclude=".config/BraveSoftware/Brave-Browser/Default/Storage/ext"
+    --exclude=".config/BraveSoftware/Brave-Browser/Default/AutofillStrikeDatabase"
+    --exclude=".config/BraveSoftware/Brave-Browser/Default/History*"
+    --exclude=".config/BraveSoftware/Brave-Browser/Default/Favicons*"
+    --exclude=".config/BraveSoftware/Brave-Browser/Default/Origin\ Bound\ Certs*"
+    --exclude=".config/BraveSoftware/Brave-Browser/Default/Sync\ Data*"
+    # Extension data (exclude) but not settings
+    --exclude=".config/BraveSoftware/Brave-Browser/Default/Extension\ State"
+    --exclude=".config/BraveSoftware/Brave-Browser/Default/Extension\ Scripts"
+    # Note: Extension Rules not excluded to keep settings
+    --exclude=".config/BraveSoftware/Brave-Browser/Default/Shortcuts*"
+    --exclude=".config/BraveSoftware/Brave-Browser/Default/Top\ Sites*"
+    --exclude=".config/BraveSoftware/Brave-Browser/Default/Visit*"
+    --exclude=".config/BraveSoftware/Brave-Browser/Default/Heavy\ Ad\ Intervention*"
+    --exclude=".config/BraveSoftware/Brave-Browser/Default/Media\ History*"
+    --exclude=".config/BraveSoftware/Brave-Browser/Default/Platform\ Notifications"
+
+    # Joplin
     --exclude=".config/Joplin/SingletonCookie"
     --exclude=".config/Joplin/SingletonLock"
     --exclude=".config/Joplin/SingletonSocket"
     --exclude=".config/Joplin/GPUCache/"
+    --exclude=".config/Joplin/Local\ Storage/leveldb"
+    --exclude=".config/Joplin/databases"
+    --exclude=".config/Joplin/security"
+    --exclude=".config/Joplin/tmp"
+    --exclude=".config/Joplin/*.log"
+    --exclude=".config/Joplin/resources"
+
+    # Signal
     --exclude=".config/Signal\ Beta/stickers.noindex"
     --exclude=".config/Signal\ Beta/SingletonCookie"
     --exclude=".config/Signal\ Beta/SingletonLock"
     --exclude=".config/Signal\ Beta/SingletonSocket"
-    --exclude=".local/state/nix/profiles/home-manager"
-    --exclude=".nixos-config"
-    --exclude=".system_setup_complete"
-    --exclude=".config/Joplin/Local\ Storage/leveldb    "
+    --exclude=".config/Signal\ Beta/databases"
+    --exclude=".config/Signal\ Beta/sql"
+    --exclude=".config/Signal\ Beta/logs"
+    --exclude=".config/Signal\ Beta/attachments"
+    --exclude=".config/Signal\ Beta/config.json"
+    --exclude=".config/Signal\ Beta/debug.log"
+    --exclude=".config/Signal\ Beta/GPUCache"
+    --exclude=".config/Signal\ Beta/IndexedDB"
+    --exclude=".config/Signal\ Beta/Local\ Storage"
+    --exclude=".config/Signal\ Beta/Session\ Storage"
 )
 
 # Initialize/check git repository
